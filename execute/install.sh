@@ -9,11 +9,11 @@ function usage () {
    echo "Syntax: [-i|p|f|h|v|V]"
    echo "options:"
    echo "i     install"
-   echo "p     install"
-   echo "f     install"
+   echo "p     Ansible vault password for crypted service file"
+   echo "f     Ansible vault password file for crypted service file"
+   echo "k     Not crypted service Account file"
    echo "h     Help."
-   echo "v     Verbose mode."
-   echo "V     Print software version and exit."
+   echo "v     Version."
    echo
    copyrights
    echo

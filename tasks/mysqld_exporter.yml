@@ -65,15 +65,15 @@
   debug:
     var: mysql_password
 
-- name: Create mysql user
-  become: yes
-  community.mysql.mysql_user:
-    name: mysqld_exporter
-    host: "127.0.0.1"
-    priv: "*.*:PROCESS, REPLICATION CLIENT, SELECT"
-    password: "{{ mysql_password }}"
-    resource_limits:
-      MAX_USER_CONNECTIONS: 2
+# - name: Create mysql user
+#   become: yes
+#   community.mysql.mysql_user:
+#     name: mysqld_exporter
+#     host: "127.0.0.1"
+#     priv: "*.*:PROCESS, REPLICATION CLIENT, SELECT"
+#     password: "{{ mysql_password }}"
+#     resource_limits:
+#       MAX_USER_CONNECTIONS: 2
 
 - name: create exporter.cnf
   become: yes
