@@ -1,0 +1,13 @@
+plugin: gcp_compute
+projects:
+  - change-it
+zones:
+  - us-central1-a
+hostnames:
+  - name
+filters: 
+  - status = RUNNING AND (labels.node_exporter = true OR labels.mysqld_exporter = true)
+auth_kind: serviceaccount
+vars_prefix: gcp__
+compose:
+  ansible_host: networkInterfaces[0].accessConfigs[0].natIP

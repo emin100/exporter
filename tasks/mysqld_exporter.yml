@@ -1,0 +1,90 @@
+---
+- name: mysqld_exporter stat
+  local_action:
+    module: stat
+    path: "{{ tmp_directory }}/mysqld_exporter-{{ mysqld_exporter_version }}.tar.gz"
+  register: st
+
+- name: Download mysqld_exporter
+  local_action:
+    module: get_url
+    url: "https://github.com/prometheus/mysqld_exporter/releases/download/v{{ mysqld_exporter_version }}/mysqld_exporter-{{ mysqld_exporter_version }}.linux-amd64.tar.gz"
+    dest: "{{ tmp_directory }}/mysqld_exporter-{{ mysqld_exporter_version }}.tar.gz"
+  when: st.stat.exists is false
+
+- name: Copy files
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item.src }}/{{ item.name }}"
+    dest: "{{ item.dest }}/{{ item.name }}"
+    owner: root
+    group: root
+    mode: '0755'
+    force: false
+  with_items:
+    - { src: "{{ tmp_directory }}", name: "mysqld_exporter-{{ mysqld_exporter_version }}.tar.gz", dest: "/tmp/" }
+    - { src: "files/", name: "mysqld_exporter.service", dest: "/etc/systemd/system/" }
+    # - { src: "files/", name: "mysqld_exporter.socket", dest: "/etc/systemd/system/" }
+    - { src: "files/", name: "mysqld_exporter", dest: "/etc/sysconfig/" }
+
+- name: Unarchive mysqld_exporter-x.x.x.tar.gz
+  ansible.builtin.unarchive:
+    src: "/tmp/mysqld_exporter-{{ mysqld_exporter_version }}.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+
+- name: Add the user 'mysqld_exporter'
+  become: yes
+  ansible.builtin.user:
+    name: mysqld_exporter
+    shell: /bin/bash
+    system: true
+
+- name: Add the group 'mysqld_exporter'
+  become: yes
+  ansible.builtin.group:
+    name: mysqld_exporter
+    system: true
+
+- name: Copy node_exporter to /usr/local/bin/
+  become: yes
+  ansible.builtin.copy:
+    src: "/tmp/mysqld_exporter-{{ mysqld_exporter_version }}.linux-amd64/mysqld_exporter"
+    dest: /usr/sbin/mysqld_exporter
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: create random but idempotent password
+  ansible.builtin.set_fact:
+    cacheable: false
+    mysql_password: "{{ lookup('ansible.builtin.password', '/tmp/null', length=12, chars=['ascii_letters', 'digits', '.,:-_']) }}"
+
+- name: Pass
+  debug:
+    var: mysql_password
+
+- name: Create mysql user
+  become: yes
+  community.mysql.mysql_user:
+    name: mysqld_exporter
+    host: "127.0.0.1"
+    priv: "*.*:PROCESS, REPLICATION CLIENT, SELECT"
+    password: "{{ mysql_password }}"
+    resource_limits:
+      MAX_USER_CONNECTIONS: 2
+
+- name: create exporter.cnf
+  become: yes
+  ansible.builtin.template:
+      src: templates/mysqld_exporter.cnf.j2
+      dest: /etc/.mysqld_exporter.cnf
+
+- name: mysqld_exporter reload and restarted
+  become: yes
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: mysqld_exporter

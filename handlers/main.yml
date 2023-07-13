@@ -1,0 +1,12 @@
+---
+# handlers file for exporter
+- name: Restart node_exporter
+  ansible.builtin.service:
+    name: node_exporter
+    state: restarted
+    enabled: true
+
+- name: Restart mysqld_exporter
+  ansible.builtin.service:
+    name: mysqld_exporter
+    state: restarted

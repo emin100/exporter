@@ -1,0 +1,8 @@
+[Unit]
+Description=Mysqld Exporter
+
+[Socket]
+ListenStream=9104
+
+[Install]
+WantedBy=sockets.target

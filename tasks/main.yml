@@ -1,0 +1,20 @@
+---
+- name: Create a directory if it does not exist
+  run_once: true
+  local_action:
+    module: file
+    path: "{{ tmp_directory }}"
+    state: directory
+
+- name: Get service list
+  service_facts:
+
+- name: Install node_exporter
+  ansible.builtin.include_tasks: node_exporter.yml
+  tags: node_exporter
+  when:  gcp__labels.node_exporter is defined and gcp__labels.node_exporter == "true" and (ansible_facts.services['node_exporter.service'] is undefined or ansible_facts.services['node_exporter.service'].status == "not-found") 
+
+- name: Install mysqld_exporter
+  ansible.builtin.include_tasks: mysqld_exporter.yml
+  tags: mysqld_exporter
+  when:  gcp__labels.mysqld_exporter is defined and gcp__labels.mysqld_exporter == "true" and (ansible_facts.services['mysqld_exporter.service'] is undefined or ansible_facts.services['mysqld_exporter.service'].status == "not-found") 

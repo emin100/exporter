@@ -1,0 +1,4 @@
+---
+# vars file for exporter
+# node_exporter: false
+# mysqld_exporter: false

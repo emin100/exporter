@@ -1,0 +1,83 @@
+---
+- name: node_exporter stat
+  local_action:
+    module: stat
+    path: "{{ tmp_directory }}/node_exporter-{{ node_exporter_version }}.tar.gz"
+  register: st
+
+- name: Download node_exporter
+  local_action:
+    module: get_url
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "{{ tmp_directory }}/node_exporter-{{ node_exporter_version }}.tar.gz"
+  when: st.stat.exists is false
+
+- name: Add the user 'node_exporter'
+  become: yes
+  ansible.builtin.user:
+    name: node_exporter
+    shell: /bin/bash
+    system: true
+
+- name: Add the group 'node_exporter'
+  become: yes
+  ansible.builtin.group:
+    name: node_exporter
+    system: true
+
+- name: create /etc/sysconfig
+  become: yes
+  file:
+    path: /etc/sysconfig
+    state: directory
+    mode: "0770"
+
+- name: Copy files
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item.src }}/{{ item.name }}"
+    dest: "{{ item.dest }}/{{ item.name }}"
+    owner: root
+    group: root
+    mode: '0755'
+    force: false
+  with_items:
+    - { src: "{{ tmp_directory }}", name: "node_exporter-{{ node_exporter_version }}.tar.gz", dest: "/tmp/" }
+    - { src: "files/", name: "node_exporter.service", dest: "/etc/systemd/system/" }
+    - { src: "files/", name: "node_exporter.socket", dest: "/etc/systemd/system/" }
+    - { src: "files/", name: "node_exporter", dest: "/etc/sysconfig/" }
+
+- name: Unarchive node_exporter-x.x.x.tar.gz
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+
+
+- name: create /var/lib/node_exporter/textfile_collector
+  become: yes
+  file:
+    path: /var/lib/node_exporter/textfile_collector
+    state: directory
+    owner: node_exporter
+    group: node_exporter
+    mode: "0770"
+    recurse: true
+
+- name: Copy node_exporter to /usr/local/bin/
+  become: yes
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+    dest: /usr/sbin/node_exporter
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: node_exporter reload and restarted
+  become: yes
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: node_exporter
